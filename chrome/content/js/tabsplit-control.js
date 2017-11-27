@@ -68,6 +68,7 @@ TabSplit.control = {
         obs.disconnect();
         // TODO: Setup listeners to the chrome global event
         this._registerChromeEvents();
+        this._overrideChromeBehaviors();
         // TODO: Override the chrome global behavior
         resolve();
       });
@@ -342,6 +343,49 @@ TabSplit.control = {
   },
 
   /* The global listeners end */
+
+  // TMP
+    _chromeBehaviors: null,
+
+  _overrideChromeBehaviors() { return;
+    if (this._chromeBehaviors) {
+      return;
+    }
+    this._chromeBehaviors = [
+      {
+        targetParent: this._gBrowser,
+        targetName: "mPanelContainer",
+        target: this._gBrowser.mPanelContainer,
+        proxyHandler: this._getPanelContainerProxy(),
+      }
+    ];
+    for (let { targetParent, targetName, target, proxyHandler } of this._chromeBehaviors) {
+      targetParent[targetName] = new Proxy(target, proxyHandler);
+    }
+  },
+
+  _restoreChromeBehaviors() {
+    if (!this._chromeBehaviors) {
+      return;
+    }
+    for (let { targetParent, targetName, target } of this._chromeBehaviors) {
+      targetParent[targetName] = target;
+    }
+    this._chromeBehaviors = null;
+  },
+
+  _getPanelContainerProxy() {
+    return {
+      set: (target, prop, value, receiver) => {
+        console.log("TMP> tabsplit-control - Proxy set - prop, value, target =", prop, value, target);
+        target[prop] = value;
+      },
+      apply: (target, thisArg, args) => {
+        console.log("TMP> tabsplit-control - Proxy appy - thisArg, args, target =", thisArg, args, target);
+        return target.call(thisArg, ...args);
+      }
+    };
+  },
 };
 
 })(this);
