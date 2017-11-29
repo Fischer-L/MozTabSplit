@@ -386,6 +386,65 @@ TabSplit.control = {
       }
     };
   },
+  
+  _overrideChromeBehaviors() {
+    if (this._chromeBehaviors) {
+      return;
+    }
+    this._chromeBehaviors = [
+      {
+        targetParent: this._gBrowser.tabContainer,
+        targetName: "_getDragTargetTab",
+        target: this._gBrowser.tabContainer._getDragTargetTab,
+        proxyHandler: this._getDragTargetTabProxy(),
+      },
+      {
+        targetParent: this._gBrowser.tabContainer,
+        targetName: "_getDropEffectForTabDrag",
+        target: this._gBrowser.tabContainer._getDropEffectForTabDrag,
+        proxyHandler: this._getDropEffectForTabDragProxy(),
+      }
+    ];
+    for (let { targetParent, targetName, target, proxyHandler } of this._chromeBehaviors) {
+      targetParent[targetName] = new Proxy(target, proxyHandler);
+    }
+  },
+
+  _restoreChromeBehaviors() {
+    if (!this._chromeBehaviors) {
+      return;
+    }
+    for (let { targetParent, targetName, target } of this._chromeBehaviors) {
+      targetParent[targetName] = target;
+    }
+    this._chromeBehaviors = null;
+  },
+
+  _getDragTargetTabProxy() {
+    let proxy = {};
+    proxy.apply = (target, thisArg, args) => {
+      let e = args[0];
+      console.log("TMP> tabsplit-control - _getDragTargetTabProxy", e.target);
+      if (e.target.hasAttribute("data-tabsplit-tab-group-id")) {
+        return null;
+      }
+      return target.call(thisArg, ...args);
+    };
+    return proxy;
+  },
+
+  _getDropEffectForTabDragProxy() {
+    let proxy = {};
+    proxy.apply = (target, thisArg, args) => {
+      let e = args[0];
+      console.log("TMP> tabsplit-control - _getDropEffectForTabDragProxy", e.target);
+      if (e.target.hasAttribute("data-tabsplit-tab-group-id")) {
+        return "none";
+      }
+      return target.call(thisArg, ...args);
+    };
+    return proxy;
+  },
 };
 
 })(this);
