@@ -115,6 +115,8 @@ TabSplit.view = {
     this._gBrowser.setAttribute("data-tabsplit-tabbrowser-init", "true");
   },
 
+  TMP_V: 2,
+
   _refreshTabbrowser(selectedTabGroup) {
     let selectedPanel = this._state.selectedLinkedPanel;
     let activePanels = [ selectedPanel ];
@@ -126,24 +128,52 @@ TabSplit.view = {
     console.log("TMP> tabsplit-view - _refreshTabbrowser - activePanels =", activePanels);
 
     let boxes = this._utils.getNotificationboxes();
-    boxes.forEach(box => {
-      let browser = this._utils.getBrowserByNotificationbox(box);
-      let isActive = browser.docShellIsActive;
-      // Below only set the docShell state when finding the inconsistency,
-      // because that operation is expensive.
-      if (activePanels.includes(box.id)) {
-        box.style.visibility = "visible";
-        if (isActive == false) {
-          console.log("TMP> tabsplit-view - _refreshTabbrowser - set docShellIsActive to true for ", box.id);
-          browser.docShellIsActive = true;
+    console.log("TMP> tabsplit-view - _refreshTabbrowser - TMP_V =", this.TMP_V);
+    if (this.TMP_V == 1) {
+      
+      boxes.forEach(box => {
+        let browser = this._utils.getBrowserByNotificationbox(box);
+        let isActive = browser.docShellIsActive;
+        // Below only set the docShell state when finding the inconsistency,
+        // because that operation is expensive.
+        if (activePanels.includes(box.id)) {
+          box.style.visibility = "visible";
+          if (isActive == false) {
+            // console.log("TMP> tabsplit-view - _refreshTabbrowser - set docShellIsActive to true for ", box.id);
+            browser.docShellIsActive = true;
+          }
+        } else {
+          box.style.visibility = "hidden";
+          if (isActive == true) {
+            browser.docShellIsActive = false;
+          }
         }
-      } else {
-        box.style.visibility = "hidden";
-        if (isActive == true) {
+      });
+
+    } else if (this.TMP_V == 2) {
+      if (selectedTabGroup) {
+        selectedTabGroup.tabs.forEach(tabState => {
+          let box = this._utils.getNotificationboxByLinkedPanel(tabState.linkedPanel);
+          if (tabState.linkedPanel == selectedPanel) {
+            box.classList.add("tabsplit-focus");
+          } else {
+            box.classList.remove("tabsplit-focus");
+          }
+        });
+      }
+      boxes.forEach(box => {
+        let browser = this._utils.getBrowserByNotificationbox(box);
+        if (activePanels.includes(box.id)) {
+          box.style.visibility = "visible";
+          browser.docShellIsActive = true;
+        } else {
+          box.style.visibility = "hidden";
           browser.docShellIsActive = false;
         }
-      }
-    });
+      });
+
+
+    }
   },
 
   _uninitTabbrowser() {
@@ -198,7 +228,7 @@ TabSplit.view = {
     this._NotificationboxClickHandlers = null;
   },
 
-  _setTabGroupFocus(selectedTabGroup) {
+  _setTabGroupFocus(selectedTabGroup) { if (this.TMP_V == 2) return;
     let selectedPanel = this._state.selectedLinkedPanel;
     if (selectedTabGroup) {
       console.log("TMP> tabsplit-view - _setTabGroupFocus");
