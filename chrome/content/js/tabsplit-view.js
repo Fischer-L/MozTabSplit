@@ -116,7 +116,7 @@ TabSplit.view = {
     this._gBrowser.setAttribute("data-tabsplit-tabbrowser-init", "true");
   },
 
-  _refreshTabbrowser(selectedTabGroup) {
+  OLD_refreshTabbrowser(oldSelectedLinkedPanel, selectedTabGroup) {
     let selectedPanel = this._state.selectedLinkedPanel;
     let activePanels = [ selectedPanel ];
     if (selectedTabGroup) {
@@ -144,6 +144,63 @@ TabSplit.view = {
         }
       }
     });
+  },
+
+  _refreshTabbrowser(oldSelectedLinkedPanel, selectedTabGroup) {
+    let selectedPanel = this._state.selectedLinkedPanel;
+    let activePanels = [ selectedPanel ];
+    if (selectedTabGroup) {
+      // Now the selected tab is in one tab-split group,
+      // so there are multiple active panels.
+      activePanels = selectedTabGroup.tabs.map(tab => tab.linkedPanel);
+    }
+    console.log("TMP> tabsplit-view - _refreshTabbrowser - activePanels =", activePanels);
+
+    let tab = null;
+    let box = null;
+    let state = null;
+    let switcher = this._gBrowser._getSwitcher();
+    activePanels.forEach(panel => {
+      tab = this._utils.getTabByLinkedPanel(panel);
+      box = this._utils.getNotificationboxByLinkedPanel(panel);
+      state = switcher.tabState.get(tab);
+      box.style.visibility = "visible";
+      if (state !== switcher.STATE_LOADED) {
+        switcher.setTabState(tab, switcher.STATE_LOADING);
+      }
+    });
+    if (!activePanels.includes(oldSelectedLinkedPanel)) {
+      tab = this._utils.getTabByLinkedPanel(oldSelectedLinkedPanel);
+      box = this._utils.getNotificationboxByLinkedPanel(oldSelectedLinkedPanel);
+      if (tab && box) {
+        state = switcher.tabState.get(oldSelectedLinkedPanel);
+        box.style.visibility = "hidden";
+        if (state !== switcher.STATE_UNLOADED) {
+          switcher.setTabState(tab, switcher.STATE_UNLOADING);
+        }
+      }
+    }
+
+    // win.requestAnimationFrame(() => {
+    //   let boxes = this._utils.getNotificationboxes();
+    //   let switcher = this._gBrowser._getSwitcher();
+    //   boxes.forEach(box => {
+    //     let tab = this._utils.getTabByLinkedPanel(box.id);
+    //     let state = switcher.tabState.get(tab);
+    //     if (activePanels.includes(box.id)) {
+    //       box.style.visibility = "visible";
+    //       if (state !== switcher.STATE_LOADED) {
+    //         switcher.setTabState(tab, switcher.STATE_LOADING);
+    //       }
+    //     } else {
+    //       box.style.visibility = "hidden";
+    //       // Pre-loaded about:newtab have box but no tab
+    //       if (tab && state !== undefined && state !== switcher.STATE_UNLOADED) {
+    //         switcher.setTabState(tab, switcher.STATE_UNLOADING);
+    //       }
+    //     }
+    //   });
+    // });
   },
 
   _uninitTabbrowser() {
@@ -403,7 +460,8 @@ TabSplit.view = {
                                this._state.selectedLinkedPanel, this._state);
 
       // TMP: Do when the selectedLinkedPanel changes
-      this._refreshTabbrowser(selectedTabGroup);
+      // TMP OLD: this._refreshTabbrowser(selectedTabGroup);
+      this._refreshTabbrowser(oldState.selectedLinkedPanel, selectedTabGroup);
       // TMP: Do when the selectedLinkedPanel changes && selectedTabGroup
       this._setTabGroupFocus(selectedTabGroup);
       this._refreshTabDistributions(selectedTabGroup);
